@@ -107,7 +107,7 @@ class Cell_dataset(Dataset):
             vol_name = self.sample_list[idx]
             data = h5py.File(vol_name)
             image, label = data['image'][:], data['label'][:]
-
+        
         sample = {'image': image, 'label': label}
         if self.transform:
             sample = self.transform(sample)
@@ -146,12 +146,18 @@ class RandomGenerator(object):
         elif random.random() > 0.5:
             image, label = random_rotate(image, label)
         # get the dimensions in x, channels, y            
-        x, c, y = image.shape
+        x, y, c = image.shape
         # Resize the image and label to the desired output size using cubic interpolation (order=3)
         if x != self.output_size[0] or y != self.output_size[1]:
-            image = zoom(image, (self.output_size[0] / x, self.output_size[1] / y), order=3)
-            label = zoom(label, (self.output_size[0] / x, self.output_size[1] / y), order=0)
-        
+            image = zoom(image, 
+                            (self.output_size[0] / x,   #zoom_factor_x
+                            self.output_size[1] / y,    #zoom_factor_y
+                            1),                         #zoom_factor_z
+                        order=3)
+            label = zoom(label, 
+                            (self.output_size[0] / x, #zoom_factor_x
+                            self.output_size[1] / y), #zoom_factor_y
+                        order=0) 
         # Convert the image to a PyTorch tensor and add a channel dimension
         image = torch.from_numpy(image.astype(np.float32))#.unsqueeze(0)
         
@@ -160,8 +166,5 @@ class RandomGenerator(object):
         
         # Create a dictionary with the transformed image and label
         sample = {'image': image, 'label': label.long()}
-
-
-
 
         return sample

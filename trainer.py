@@ -83,7 +83,6 @@ def cell_trainer(args, model, snapshot_path):
     model.train()
     ce_loss = CrossEntropyLoss()
     dice_loss = DiceLoss(num_classes)
-    print(list(model.parameters()))
     optimizer = optim.SGD(model.parameters(), lr=base_lr, 
                             momentum=0.9, weight_decay=0.0001)
 
@@ -105,8 +104,9 @@ def cell_trainer(args, model, snapshot_path):
     for epoch_num in iterator:
         for i_batch, sampled_batch in enumerate(trainloader):
             image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
-            print(image_batch)
-            print(label_batch)
+
+            break
+        break
 
 
 print("trainer.py done")
