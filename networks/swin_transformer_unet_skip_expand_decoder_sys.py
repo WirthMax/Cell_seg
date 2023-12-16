@@ -530,7 +530,6 @@ class PatchEmbed(nn.Module):
 
         self.in_chans = in_chans
         self.embed_dim = embed_dim
-
         self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
         if norm_layer is not None:
             self.norm = norm_layer(embed_dim)
@@ -539,10 +538,12 @@ class PatchEmbed(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        # FIXME look at relaxing size constraints
-        assert H == self.img_size[0] and W == self.img_size[1], \
-            f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
-        x = self.proj(x).flatten(2).transpose(1, 2)  # B Ph*Pw C
+        #  # FIXME look at relaxing size constraints
+        #  assert H == self.img_size[0] and W == self.img_size[1], \
+        #      f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
+        x = self.proj(x)
+        
+        x = x.flatten(2).transpose(1, 2)  # B Ph*Pw C
         if self.norm is not None:
             x = self.norm(x)
         return x
@@ -555,46 +556,6 @@ class PatchEmbed(nn.Module):
         return flops
 
 
-
-# class PatchEmbed(nn.Module):
-#     # ... (unchanged code)
-
-#     def __init__(self, img_size=224, patch_size=4, in_chans=3, embed_dim=96, norm_layer=None):
-#         super().__init__()
-#         img_size = to_2tuple(img_size)
-#         patch_size = to_2tuple(patch_size)
-#         patches_resolution = [img_size[0] // patch_size[0], img_size[1] // patch_size[1]]
-#         self.img_size = img_size
-#         self.patch_size = patch_size
-#         self.patches_resolution = patches_resolution
-#         self.num_patches = patches_resolution[0] * patches_resolution[1]
-
-#         self.in_chans = in_chans
-#         self.embed_dim = embed_dim
-
-#         # Create separate convolutional layers for each channel
-#         self.projs = nn.ModuleList([nn.Conv2d(1, 
-#                                             embed_dim, 
-#                                             kernel_size=patch_size, 
-#                                             stride=patch_size) for _ in range(in_chans)])
-
-#         if norm_layer is not None:
-#             self.norm = norm_layer(embed_dim)
-#         else:
-#             self.norm = None
-
-#     def forward(self, x):
-#         B, C, H, W = x.shape
-#         assert H == self.img_size[0] and W == self.img_size[1], \
-#             f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
-
-#         # Apply separate convolutional layers for each channel
-#         x = torch.cat([proj(x[:, i:i+1, :, :]) for i, proj in enumerate(self.projs)], dim=1)
-#         x = x.flatten(2).transpose(1, 2)  # B Ph*Pw C
-
-#         if self.norm is not None:
-#             x = self.norm(x)
-#         return x
 
 
 class SwinTransformerSys(nn.Module):
@@ -665,6 +626,9 @@ class SwinTransformerSys(nn.Module):
         # build encoder and bottleneck layers
         self.layers = nn.ModuleList()
         for i_layer in range(self.num_layers):
+
+            print("SWIN TRANSFORMER SYS input_resolution: ", (patches_resolution[0] // (2 ** i_layer),
+                                                 patches_resolution[1] // (2 ** i_layer)))
             layer = BasicLayer(dim=int(embed_dim * 2 ** i_layer),
                                input_resolution=(patches_resolution[0] // (2 ** i_layer),
                                                  patches_resolution[1] // (2 ** i_layer)),

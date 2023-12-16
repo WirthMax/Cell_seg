@@ -4,6 +4,7 @@ import h5py
 import numpy as np
 import torch
 from scipy import ndimage
+from scipy.ndimage import rotate
 from scipy.ndimage.interpolation import zoom
 from torch.utils.data import Dataset
 
@@ -25,10 +26,9 @@ def random_rot_flip(image, label):
         A tuple containing the transformed image and label arrays after applying 
         random rotations and flips.
     """
-    k = np.random.randint(0, 4)
-    image = np.rot90(image, k)
-    label = np.rot90(label, k)
-    axis = np.random.randint(0, 2)
+    image = np.swapaxes(image, 1, 2)
+    label = np.swapaxes(label, 0, 1)
+    axis = np.random.randint(1, 2)
     image = np.flip(image, axis=axis).copy()
     label = np.flip(label, axis=axis).copy()
     return image, label
@@ -107,7 +107,6 @@ class Cell_dataset(Dataset):
             vol_name = self.sample_list[idx]
             data = h5py.File(vol_name)
             image, label = data['image'][:], data['label'][:]
-        
         sample = {'image': image, 'label': label}
         if self.transform:
             sample = self.transform(sample)
@@ -140,19 +139,19 @@ class RandomGenerator(object):
             A dictionary with the transformed image and label arrays.
         """
         image, label = sample['image'], sample['label']
-
         if random.random() > 0.5:
             image, label = random_rot_flip(image, label)
         elif random.random() > 0.5:
             image, label = random_rotate(image, label)
+
         # get the dimensions in x, channels, y            
-        x, y, c = image.shape
+        c, x, y = image.shape
         # Resize the image and label to the desired output size using cubic interpolation (order=3)
         if x != self.output_size[0] or y != self.output_size[1]:
             image = zoom(image, 
-                            (self.output_size[0] / x,   #zoom_factor_x
-                            self.output_size[1] / y,    #zoom_factor_y
-                            1),                         #zoom_factor_z
+                            (1,                          #zoom_factor_z
+                            self.output_size[0] / x,     #zoom_factor_x
+                            self.output_size[1] / y),    #zoom_factor_y
                         order=3)
             label = zoom(label, 
                             (self.output_size[0] / x, #zoom_factor_x
@@ -163,8 +162,6 @@ class RandomGenerator(object):
         
         # Convert the label to a PyTorch tensor with long data type
         label = torch.from_numpy(label.astype(np.float32))
-        
         # Create a dictionary with the transformed image and label
         sample = {'image': image, 'label': label.long()}
-
         return sample
